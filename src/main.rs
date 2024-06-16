@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{RefCell, Ref};
 use std::iter::Peekable;
 use std::rc::Rc;
 use std::str::Chars;
@@ -51,6 +51,12 @@ struct Node {
     children: Vec<NodeRef>,
 }
 
+impl Node {
+    fn parsed(&self) -> bool {
+        return self.children.len() > 0;
+    }
+}
+
 type NodeRef = Rc<RefCell<Node>>;
 
 fn parser2(chars: &str) -> Vec<NodeRef> {
@@ -93,19 +99,6 @@ fn parser2(chars: &str) -> Vec<NodeRef> {
                 }
                 buf.push(c);
             }
-            //for c in chars.chars().skip(i + 1) {
-                //i = i + 1;
-                //if c == '(' {
-                    //indent_level = indent_level + 1;
-                //} else if c == ')' {
-                    //indent_level = indent_level - 1;
-
-                    //if indent_level == 0 {
-                        //break;
-                    //}
-                //}
-                //buf.push(c);
-            //}
             let end_i = i;
             let brackets = buf.into_iter().collect::<String>();
             println!("Parsing Inside brackets: {}", brackets);
@@ -122,11 +115,12 @@ fn parser2(chars: &str) -> Vec<NodeRef> {
                 tokens.remove(x);
             }
             i = i - (end_i - start_i);
-            let node = Rc::new(RefCell::new(Node {
-                value: '_',
-                children: nodes,
-            }));
-            tokens.insert(start_i, node);
+            //let node = Rc::new(RefCell::new(Node {
+                //value: '_',
+                //children: nodes,
+            //}));
+            //tokens.insert(start_i, node);
+            tokens.insert(start_i, nodes.get(0).unwrap().clone());
             println!("After removal and insertion i = {}", i);
             dbg!(&tokens);
         } else {
@@ -139,7 +133,7 @@ fn parser2(chars: &str) -> Vec<NodeRef> {
         let node = tokens.get(i).unwrap();
         //dbg!(node);
 
-        if node.borrow().value == NOT {
+        if node.borrow().value == NOT && !node.borrow().parsed() {
             let next = tokens.get(i + 1).unwrap();
             node.borrow_mut().children.push(next.to_owned());
             tokens.remove(i + 1);
@@ -160,7 +154,8 @@ fn parser2(chars: &str) -> Vec<NodeRef> {
         let node = tokens.get(i).unwrap();
         //dbg!(node);
 
-        if node.borrow().value == AND || node.borrow().value == OR {
+        if (node.borrow().value == AND || node.borrow().value == OR) && !node.borrow().parsed() {
+            println!("i = {}", i);
             let prev = tokens.get(i - 1).unwrap();
             let next = tokens.get(i + 1).unwrap();
             node.borrow_mut().children.push(prev.to_owned());
@@ -181,7 +176,7 @@ fn parser2(chars: &str) -> Vec<NodeRef> {
         let node = tokens.get(i).unwrap();
         //dbg!(node);
 
-        if node.borrow().value == IMPL {
+        if node.borrow().value == IMPL && !node.borrow().parsed() {
             let prev = tokens.get(i - 1).unwrap();
             let next = tokens.get(i + 1).unwrap();
             node.borrow_mut().children.push(prev.to_owned());
@@ -289,19 +284,4 @@ fn parser(chars: &mut Peekable<Chars>) -> NodeRef {
     dbg!(tree.borrow());
     return tree;
 
-    //for c in input.chars() {
-    //match c {
-    //'(' => stack.push(c),
-    //')' => {
-    //let mut buf = String::from("");
-    //while stack.last().copied().unwrap() != '(' {
-    //let char = stack.pop().unwrap();
-    //buf.push(char);
-    //}
-    //out.push(buf)
-    //}
-    //_ => stack.push(c),
-    ////_ => println!("ERROR with {c}"),
-    //}
-    //}
 }
