@@ -10,13 +10,14 @@ pub const IMPL: char = '→';
 #[derive(Debug)]
 pub struct Node {
     value: char,
-    children: Vec<NodeRef>,
+    left: Option<NodeRef>,
+    right: Option<NodeRef>,
 }
 
 impl Node {
     // Determine if a node should be skipped in parsing
     fn parsed(&self) -> bool {
-        return self.children.len() > 0;
+        return self.left.is_some() || self.right.is_some();
     }
 }
 
@@ -30,7 +31,8 @@ pub fn parser(chars: &str) -> Vec<NodeRef> {
     chars.chars().for_each(|c| {
         tokens.push(Rc::new(RefCell::new(Node {
             value: c,
-            children: vec![],
+            left: None,
+            right: None,
         })))
     });
 
@@ -86,13 +88,15 @@ pub fn parser(chars: &str) -> Vec<NodeRef> {
         }
     }
 
+    // Parse NOT backwards to properly next double negations
+    // TODO: could filter out double negations first instead?
     let mut i = tokens.len() - 1;
     loop {
         let node = tokens.get(i).unwrap();
 
         if node.borrow().value == NOT && !node.borrow().parsed() {
             let next = tokens.get(i + 1).unwrap();
-            node.borrow_mut().children.push(next.to_owned());
+            node.borrow_mut().left = Some(next.to_owned());
             tokens.remove(i + 1);
         }
 
@@ -114,8 +118,8 @@ pub fn parser(chars: &str) -> Vec<NodeRef> {
             println!("i = {}", i);
             let prev = tokens.get(i - 1).unwrap();
             let next = tokens.get(i + 1).unwrap();
-            node.borrow_mut().children.push(prev.to_owned());
-            node.borrow_mut().children.push(next.to_owned());
+            node.borrow_mut().left = Some(prev.to_owned());
+            node.borrow_mut().right = Some(next.to_owned());
             tokens.remove(i + 1);
             tokens.remove(i - 1);
         } else {
@@ -134,8 +138,8 @@ pub fn parser(chars: &str) -> Vec<NodeRef> {
         if node.borrow().value == IMPL && !node.borrow().parsed() {
             let prev = tokens.get(i - 1).unwrap();
             let next = tokens.get(i + 1).unwrap();
-            node.borrow_mut().children.push(prev.to_owned());
-            node.borrow_mut().children.push(next.to_owned());
+            node.borrow_mut().left = Some(prev.to_owned());
+            node.borrow_mut().right = Some(next.to_owned());
             tokens.remove(i + 1);
             tokens.remove(i - 1);
         } else {

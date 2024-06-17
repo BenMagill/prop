@@ -8,7 +8,6 @@ fn main() {
     let ex3 = format!("{NOT}p {OR} {NOT} {NOT}q {OR} r {IMPL} z");
     let ex4 = format!("(p {OR} q) {OR} (r {OR} q)");
     let ex5 = format!("(p {OR} (q {OR} r)) {AND} (((p {AND} q) {OR} r) {AND} z)");
-    println!("Hello, world!");
 
     // Parsed input must have no whitespace
     let in_chars: String = ex5.split_whitespace().collect();
