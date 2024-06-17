@@ -9,9 +9,9 @@ pub const IMPL: char = '→';
 
 #[derive(Debug)]
 pub struct Node {
-    value: char,
-    left: Option<NodeRef>,
-    right: Option<NodeRef>,
+    pub value: char,
+    pub left: Option<NodeRef>,
+    pub right: Option<NodeRef>,
 }
 
 impl Node {
