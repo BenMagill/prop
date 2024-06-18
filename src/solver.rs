@@ -8,6 +8,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::parser::*;
 
+#[derive(Debug)]
+pub struct Variable {
+    name: char,
+    negated: bool,
+}
+
 pub fn apply(tree: NodeRef, assignments: &HashMap<char, bool>) -> bool {
     // Collapse tree to a single truth value
 
@@ -113,15 +119,145 @@ fn remove_neg(tree: NodeRef) {
         remove_neg(tree.borrow().right.clone().unwrap());
     }
 }
-fn push_neg(tree: NodeRef) {}
+
+fn expand(tree: NodeRef) {
+    if tree.borrow().left.is_some() {
+        expand(tree.borrow().left.clone().unwrap());
+    }
+    if tree.borrow().right.is_some() {
+        expand(tree.borrow().right.clone().unwrap());
+    }
+
+    if tree.borrow().value == OR {
+        let n1 = tree.borrow().left.clone().unwrap();
+        let n2 = tree.borrow().right.clone().unwrap();
+
+        if n1.borrow().value == AND {
+            let a = n1.borrow().left.clone();
+            let b = n1.borrow().right.clone();
+            let c = tree.borrow().right.clone();
+
+            let l = Rc::new(RefCell::new(Node {
+                value: OR,
+                left: a,
+                right: c.clone(),
+            }));
+            let r = Rc::new(RefCell::new(Node {
+                value: OR,
+                left: b,
+                right: c.clone(),
+            }));
+
+            dbg!(&tree);
+            //tree.borrow_mut().value = AND;
+            //tree.borrow_mut().left = Some(l);
+            //tree.borrow_mut().right = Some(r);
+            tree.replace(Node {
+                value: AND,
+                left: Some(l),
+                right: Some(r),
+            });
+            dbg!(&tree);
+        } else if n2.borrow().value == AND {
+            let a = tree.borrow().left.clone();
+            let b = n2.borrow().left.clone();
+            let c = n2.borrow().right.clone();
+
+            let l = Rc::new(RefCell::new(Node {
+                value: OR,
+                left: a.clone(),
+                right: b,
+            }));
+            let r = Rc::new(RefCell::new(Node {
+                value: OR,
+                left: a.clone(),
+                right: c,
+            }));
+
+            dbg!(&tree);
+            //tree.borrow_mut().value = AND;
+            //tree.borrow_mut().left = Some(l);
+            //tree.borrow_mut().right = Some(r);
+            tree.replace(Node {
+                value: AND,
+                left: Some(l),
+                right: Some(r),
+            });
+            dbg!(&tree);
+        }
+    }
+}
 
 pub fn cnf(tree: NodeRef) {
-    // TODO:
-    // replace all a IMPL b with  NOT a OR b
-    // replace all a OR (b AND c) with (a OR b) AND (a OR c)
-    // replace all (a AND b) OR c with (a OR c) AND (b OR c)
-
     remove_impl(tree.clone());
     remove_neg(tree.clone());
-    //push_neg(tree);
+    expand(tree.clone());
+
+    // TODO: convert to lists of clauses
+}
+
+pub fn to_clauses(tree: NodeRef) -> Vec<Vec<Variable>> {
+    // When in CNF, all ANDs are at the top before any other symbols
+    let no_and = remove_and(tree);
+
+    let mut v = Vec::new();
+    for c in no_and {
+        v.push(
+            remove_or(c)
+                .iter()
+                .map(|n| {
+                    let mut value = n.borrow().value;
+                    if n.borrow().value == NOT {
+                        Variable {
+                            name: n.borrow().left.clone().unwrap().borrow().value,
+                            negated: true,
+                        }
+                    } else {
+                        Variable {
+                            name: value,
+                            negated: false,
+                        }
+                    }
+                })
+                .collect(),
+        );
+    }
+
+    v
+}
+
+fn remove_or(tree: NodeRef) -> Vec<NodeRef> {
+    if tree.borrow().value == OR {
+        let l = tree.borrow().left.clone().unwrap();
+        let r = tree.borrow().right.clone().unwrap();
+
+        let mut lv = remove_or(l);
+        let mut rv = remove_or(r);
+
+        let mut v = Vec::new();
+        v.append(lv.as_mut());
+        v.append(rv.as_mut());
+
+        v
+    } else {
+        return vec![tree.clone()];
+    }
+}
+
+fn remove_and(tree: NodeRef) -> Vec<NodeRef> {
+    if tree.borrow().value == AND {
+        let l = tree.borrow().left.clone().unwrap();
+        let r = tree.borrow().right.clone().unwrap();
+
+        let mut lv = remove_and(l);
+        let mut rv = remove_and(r);
+
+        let mut v = Vec::new();
+        v.append(lv.as_mut());
+        v.append(rv.as_mut());
+
+        v
+    } else {
+        return vec![tree.clone()];
+    }
 }
