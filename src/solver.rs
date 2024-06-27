@@ -1,9 +1,3 @@
-// TODO:
-// ability to test the assigning of values to variables and caculate it
-// ability to convert to CNF
-// solving and returning the asignment of variables
-// //
-
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -300,12 +294,6 @@ fn simplify_where_true(clauses: &RefCell<Vec<Clause>>, var: &Variable) {
 
 pub fn dpll(clauses: CNF) -> Option<Vec<Variable>> {
     let mut solution = vec![];
-    // TODO: in a loop
-    // remove tautologies
-    // handle unit clauses
-    // handle pure literals
-    // check if t/f
-    // case split
     dbg!(&clauses);
 
     let mut clauses = clauses.clone();
